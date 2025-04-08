@@ -1,4 +1,5 @@
 use macroquad::prelude::*;
+use macroquad::audio::{load_sound, play_sound, PlaySoundParams};
 // falling circle struct 
 struct FallingCricle 
 {
@@ -11,6 +12,7 @@ struct FallingCricle
 
 impl FallingCricle
 {
+
     fn new()->Self
     {
         // generate random x position, speed and color
@@ -101,6 +103,9 @@ impl Bullet {
 #[macroquad::main("Circle Dodger")]
 async fn main()
 {
+    // Load sound effect at startup
+    let explosion_sound = load_sound("./explosion.wav").await.unwrap();
+
     // initialize the window and player properties
     let mut player_x = screen_width()/2.0;
     let mut player_y = screen_height()-50.0;
@@ -110,8 +115,8 @@ async fn main()
     let mut circles = Vec::new();
     let mut bullets = Vec::new();
     let mut spawn_timer = 0.0;
-    let mut ammo = 10; // Limited ammunition
-    let max_ammo = 10;
+    let mut ammo = 10000; // Limited ammunition
+    let max_ammo = 10000;
 
     let mut score = 0;
     loop 
@@ -165,6 +170,12 @@ async fn main()
                     circles_to_remove.push(circle_idx);
                     bullet.active = false;
                     score += 1000; // Bonus points for shooting circles
+                    
+                    // Play explosion sound
+                    play_sound(&explosion_sound, PlaySoundParams {
+                        looped: false,
+                        volume: 0.5,
+                    });
                 }
             }
         }
@@ -247,3 +258,10 @@ async fn main()
         next_frame().await;
     }
 }
+
+
+
+
+
+
+
