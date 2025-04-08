@@ -15,7 +15,7 @@ impl FallingCricle
     {
         // generate random x position, speed and color
         let colors = vec![RED, BLUE, GREEN, YELLOW, PURPLE, ORANGE, PINK,
-            WHITE, BLACK, LIGHTGRAY, DARKGRAY, BEIGE, BROWN, MAROON, PURPLE, VIOLET];
+            WHITE, LIGHTGRAY, DARKGRAY, BEIGE, BROWN, MAROON, PURPLE, VIOLET];
         let random_color = colors[rand::gen_range(0, colors.len())];
         
         Self { 
@@ -74,7 +74,7 @@ impl Bullet {
         Self {
             x,
             y,
-            speed: 500.0,
+            speed: 800.0,
             active: true,
         }
     }
@@ -164,7 +164,7 @@ async fn main()
                 if bullet.active && bullet.collides_with_circle(circle) {
                     circles_to_remove.push(circle_idx);
                     bullet.active = false;
-                    score += 100; // Bonus points for shooting circles
+                    score += 1000; // Bonus points for shooting circles
                 }
             }
         }
@@ -199,8 +199,24 @@ async fn main()
             {
                 // Show game over message
                 clear_background(BLACK);
-                draw_text("Game Over", screen_width()/2.0 - 100.0, screen_height()/2.0, 50.0, RED);
-                draw_text(&format!("Final Score: {}", score), screen_width()/2.0 - 100.0, screen_height()/2.0 + 60.0, 40.0, WHITE);
+                
+                let game_over_text = "Game Over";
+                let score_text = format!("Final Score: {}", score);
+                
+                // Calculate text dimensions for centering
+                let game_over_size = 50.0;
+                let score_size = 40.0;
+                let screen_center_x = screen_width() / 2.0;
+                let screen_center_y = screen_height() / 2.0;
+                
+                // Calculate text positions for perfect centering
+                let game_over_x = screen_center_x - measure_text(game_over_text, None, game_over_size as u16, 1.0).width / 2.0;
+                let score_x = screen_center_x - measure_text(&score_text, None, score_size as u16, 1.0).width / 2.0;
+                
+                // Draw centered text
+                draw_text(game_over_text, game_over_x, screen_center_y - 30.0, game_over_size, RED);
+                draw_text(&score_text, score_x, screen_center_y + 30.0, score_size, WHITE);
+                
                 next_frame().await;
                 // after game finish wait for 5 sec
                 std::thread::sleep(std::time::Duration::from_secs(3)); 
