@@ -14,7 +14,8 @@ impl FallingCricle
     fn new()->Self
     {
         // generate random x position, speed and color
-        let colors = vec![RED, BLUE, GREEN, YELLOW, PURPLE, ORANGE];
+        let colors = vec![RED, BLUE, GREEN, YELLOW, PURPLE, ORANGE, PINK,
+            WHITE, BLACK, LIGHTGRAY, DARKGRAY, BEIGE, BROWN, MAROON, PURPLE, VIOLET];
         let random_color = colors[rand::gen_range(0, colors.len())];
         
         Self { 
@@ -60,6 +61,43 @@ impl FallingCricle
 
 }
 
+// Bullet struct for firing mechanism
+struct Bullet {
+    x: f32,
+    y: f32,
+    speed: f32,
+    active: bool,
+}
+
+impl Bullet {
+    fn new(x: f32, y: f32) -> Self {
+        Self {
+            x,
+            y,
+            speed: 500.0,
+            active: true,
+        }
+    }
+
+    fn update(&mut self, dt: f32) {
+        self.y -= self.speed * dt;
+    }
+
+    fn draw(&self) {
+        draw_circle(self.x, self.y, 5.0, WHITE);
+    }
+
+    fn is_off_screen(&self) -> bool {
+        self.y < 0.0
+    }
+
+    fn collides_with_circle(&self, circle: &FallingCricle) -> bool {
+        let dx = self.x - circle.x;
+        let dy = self.y - circle.y;
+        dx * dx + dy * dy < circle.radius * circle.radius
+    }
+}
+
 #[macroquad::main("Circle Dodger")]
 async fn main()
 {
@@ -70,7 +108,10 @@ async fn main()
     let player_speed = 300.0;
 
     let mut circles = Vec::new();
+    let mut bullets = Vec::new();
     let mut spawn_timer = 0.0;
+    let mut ammo = 10; // Limited ammunition
+    let max_ammo = 10;
 
     let mut score = 0;
     loop 
@@ -87,7 +128,6 @@ async fn main()
             player_x += player_speed * dt;
         }
         //for up and down movements
-
         // if is_key_down(KeyCode::Up)
         // {
         //     player_y -= player_speed * dt;
@@ -97,12 +137,44 @@ async fn main()
         //     player_y += player_speed * dt;
         // }
 
+        // Bullet firing with Space key
+        if is_key_pressed(KeyCode::Space) && ammo > 0 {
+            bullets.push(Bullet::new(player_x + player_size / 2.0, player_y));
+            ammo -= 1;
+        }
 
         // keep player in the screen 
         player_x = player_x.clamp(0.0, screen_width() - player_size);
         player_y = player_y.clamp(0.0, screen_height() - player_size);
 
         spawn_timer += dt;
+
+        // Update bullets
+        for bullet in &mut bullets {
+            bullet.update(dt);
+        }
+
+        // Remove off-screen bullets
+        bullets.retain(|bullet| !bullet.is_off_screen());
+
+        // Check bullet collisions with circles
+        let mut circles_to_remove = Vec::new();
+        for (circle_idx, circle) in circles.iter().enumerate() {
+            for bullet in &mut bullets {
+                if bullet.active && bullet.collides_with_circle(circle) {
+                    circles_to_remove.push(circle_idx);
+                    bullet.active = false;
+                    score += 100; // Bonus points for shooting circles
+                }
+            }
+        }
+
+        // Remove hit circles and inactive bullets
+        for &idx in circles_to_remove.iter().rev() 
+        {
+            circles.remove(idx);
+        }
+        bullets.retain(|bullet| bullet.active);
 
         // cricle spawn logic
         if spawn_timer > 0.5
@@ -136,12 +208,22 @@ async fn main()
             }
         }
 
-        // score and Drawing
+        clear_background(BLACK);
+
+        // Draw UI: Score and Ammo
         score += 1;
         draw_text(&format!("Score: {}", score), 10.0, 20.0, 30.0, WHITE);
+        draw_text(&format!("Ammo: {}/{}", ammo, max_ammo), 10.0, 50.0, 30.0, YELLOW);
 
+        // Draw player
         draw_rectangle(player_x, player_y, player_size, player_size, BLUE);
 
+        // Draw bullets
+        for bullet in &bullets {
+            bullet.draw();
+        }
+
+        // Draw circles
         for circle in &circles
         {
             circle.draw();
