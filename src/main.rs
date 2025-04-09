@@ -115,8 +115,8 @@ async fn main()
     let mut circles = Vec::new();
     let mut bullets = Vec::new();
     let mut spawn_timer = 0.0;
-    let mut ammo = 10000; // Limited ammunition
-    let max_ammo = 10000;
+    let mut ammo = 20; // Limited ammunition
+    let max_ammo = 20;
 
     let mut score = 0;
     loop 
@@ -167,13 +167,14 @@ async fn main()
         for (circle_idx, circle) in circles.iter().enumerate() {
             for bullet in &mut bullets {
                 if bullet.active && bullet.collides_with_circle(circle) {
+                    
                     circles_to_remove.push(circle_idx);
                     bullet.active = false;
                     score += 1000; // Bonus points for shooting circles
                     
                     // Play explosion sound
                     play_sound(&explosion_sound, PlaySoundParams {
-                        looped: false,
+                        looped: true,
                         volume: 0.5,
                     });
                 }
