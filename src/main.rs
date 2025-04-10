@@ -1,5 +1,23 @@
 use macroquad::audio::{PlaySoundParams, load_sound, play_sound};
 use macroquad::prelude::*;
+
+#[derive(Clone, Copy)]
+enum CircleType {
+    Normal,
+    Fast,
+    Big,
+}
+
+impl CircleType {
+    fn get_points(&self) -> i32 {
+        match self {
+            CircleType::Normal => 1000,
+            CircleType::Fast => 1500,
+            CircleType::Big => 2000,
+        }
+    }
+}
+
 // falling circle struct
 struct FallingCricle {
     x: f32,
@@ -7,6 +25,8 @@ struct FallingCricle {
     radius: f32,
     speed: f32,
     color: Color,
+    circle_type: CircleType,
+    health: i32,
 }
 
 impl FallingCricle {
@@ -18,12 +38,28 @@ impl FallingCricle {
         ];
         let random_color = colors[rand::gen_range(0, colors.len())];
 
+        // Randomly select circle type
+        let circle_type = match rand::gen_range(0, 100) {
+            0..=70 => CircleType::Normal,
+            71..=85 => CircleType::Fast,
+            _ => CircleType::Big,
+        };
+
+        // Set properties based on circle type
+        let (radius, speed, health) = match circle_type {
+            CircleType::Normal => (20.0, rand::gen_range(100.0, 250.0), 1),
+            CircleType::Fast => (15.0, rand::gen_range(250.0, 400.0), 1),
+            CircleType::Big => (35.0, rand::gen_range(80.0, 150.0), 2),
+        };
+
         Self {
             x: rand::gen_range(0.0, screen_width()),
             y: -50.0,
-            radius: 20.0,
-            speed: rand::gen_range(100.0, 250.0),
+            radius,
+            speed,
             color: random_color,
+            circle_type,
+            health,
         }
     }
 
@@ -34,7 +70,26 @@ impl FallingCricle {
 
     // draw the circle on screen
     fn draw(&self) {
-        draw_circle(self.x, self.y, self.radius, self.color);
+        match self.circle_type {
+            CircleType::Normal => {
+                draw_circle(self.x, self.y, self.radius, self.color);
+            }
+            CircleType::Fast => {
+                draw_circle(self.x, self.y, self.radius, self.color);
+                // Add a trail effect for fast circles
+                draw_circle(self.x, self.y - 10.0, self.radius * 0.8, Color::new(self.color.r, self.color.g, self.color.b, 0.5));
+            }
+            CircleType::Big => {
+                draw_circle(self.x, self.y, self.radius, self.color);
+                // Add an outline for big circles
+                draw_circle_lines(self.x, self.y, self.radius + 5.0, 2.0, WHITE);
+            }
+        }
+    }
+
+    fn take_damage(&mut self) -> bool {
+        self.health -= 1;
+        self.health <= 0
     }
 
     fn is_of_screen(&self) -> bool {
@@ -154,26 +209,30 @@ async fn main() {
 
         // Check bullet collisions with circles
         let mut circles_to_remove = Vec::new();
-        for (circle_idx, circle) in circles.iter().enumerate() {
+        for (circle_idx, circle) in circles.iter_mut().enumerate() {
             for bullet in &mut bullets {
                 if bullet.active && bullet.collides_with_circle(circle) {
-                    circles_to_remove.push(circle_idx);
                     bullet.active = false;
-                    score += 1000; // Bonus points for shooting circles
+                    
+                    // Check if circle is destroyed
+                    if circle.take_damage() {
+                        circles_to_remove.push(circle_idx);
+                        score += circle.circle_type.get_points();
 
-                    // Play explosion sound
-                    play_sound(
-                        &explosion_sound,
-                        PlaySoundParams {
-                            looped: true,
-                            volume: 0.5,
-                        },
-                    );
+                        // Play explosion sound
+                        play_sound(
+                            &explosion_sound,
+                            PlaySoundParams {
+                                looped: false,
+                                volume: 0.5,
+                            },
+                        );
+                    }
                 }
             }
         }
 
-        // Remove hit circles and inactive bullets
+        // Remove destroyed circles and inactive bullets
         for &idx in circles_to_remove.iter().rev() {
             circles.remove(idx);
         }
