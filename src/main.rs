@@ -41,7 +41,7 @@ impl FallingCricle {
 
         let (radius, speed, health) = match circle_type {
             CircleType::Normal => (20.0, rand::gen_range(100.0, 250.0), 1),
-            CircleType::Fast => (15.0, rand::gen_range(250.0, 400.0), 1),
+            CircleType::Fast => (15.0, rand::gen_range(250.0, 1000.0), 1),
             CircleType::Big => (35.0, rand::gen_range(80.0, 150.0), 2),
         };
 
@@ -202,7 +202,8 @@ async fn main() {
             }
             for &idx in circles_to_remove.iter().rev() { circles.remove(idx); }
 
-            clear_background(BLACK);
+            // clear_background(BLACK);
+            draw_gradient_background();
 
             // 🎯 score = time survived + circle kills
             score += (dt * 10.0) as i32;
@@ -245,5 +246,38 @@ async fn main() {
 
             next_frame().await;
         }
+    }
+    
+}
+
+
+fn draw_gradient_background() {
+    let time = get_time() as f32;
+
+    let top_color = Color::new(
+        0.1 + 0.2 * (time * 0.5).sin(),
+        0.0,
+        0.3 + 0.3 * (time * 0.3).cos(),
+        1.0,
+    );
+
+    let bottom_color = Color::new(
+        0.0,
+        0.3 + 0.3 * (time * 0.4).sin(),
+        0.6 + 0.3 * (time * 0.2).cos(),
+        1.0,
+    );
+
+    let steps = 50; // smoother gradient = more steps
+    let h = screen_height() / steps as f32;
+
+    for i in 0..steps {
+        let t = i as f32 / steps as f32;
+        let r = top_color.r * (1.0 - t) + bottom_color.r * t;
+        let g = top_color.g * (1.0 - t) + bottom_color.g * t;
+        let b = top_color.b * (1.0 - t) + bottom_color.b * t;
+
+        let y = i as f32 * h;
+        draw_rectangle(0.0, y, screen_width(), h, Color::new(r, g, b, 1.0));
     }
 }
