@@ -11,14 +11,13 @@ enum CircleType {
 impl CircleType {
     fn get_points(&self) -> i32 {
         match self {
-            CircleType::Normal => 1000,
-            CircleType::Fast => 1500,
-            CircleType::Big => 2000,
+            CircleType::Normal => 100,
+            CircleType::Fast => 150,
+            CircleType::Big => 200,
         }
     }
 }
 
-// falling circle struct
 struct FallingCricle {
     x: f32,
     y: f32,
@@ -31,21 +30,15 @@ struct FallingCricle {
 
 impl FallingCricle {
     fn new() -> Self {
-        // generate random x position, speed and color
-        let colors = vec![
-            RED, BLUE, GREEN, YELLOW, PURPLE, ORANGE, PINK, WHITE, LIGHTGRAY, DARKGRAY, BEIGE,
-            BROWN, MAROON, PURPLE, VIOLET,
-        ];
+        let colors = vec![RED, BLUE, GREEN, YELLOW, PURPLE, ORANGE, PINK, WHITE, LIGHTGRAY, DARKGRAY, BEIGE, BROWN, MAROON, PURPLE, VIOLET];
         let random_color = colors[rand::gen_range(0, colors.len())];
 
-        // Randomly select circle type
         let circle_type = match rand::gen_range(0, 100) {
             0..=70 => CircleType::Normal,
             71..=85 => CircleType::Fast,
             _ => CircleType::Big,
         };
 
-        // Set properties based on circle type
         let (radius, speed, health) = match circle_type {
             CircleType::Normal => (20.0, rand::gen_range(100.0, 250.0), 1),
             CircleType::Fast => (15.0, rand::gen_range(250.0, 400.0), 1),
@@ -63,25 +56,19 @@ impl FallingCricle {
         }
     }
 
-    // update the position of the circle
     fn update(&mut self, dt: f32) {
         self.y += self.speed * dt;
     }
 
-    // draw the circle on screen
     fn draw(&self) {
         match self.circle_type {
-            CircleType::Normal => {
-                draw_circle(self.x, self.y, self.radius, self.color);
-            }
+            CircleType::Normal => draw_circle(self.x, self.y, self.radius, self.color),
             CircleType::Fast => {
                 draw_circle(self.x, self.y, self.radius, self.color);
-                // Add a trail effect for fast circles
                 draw_circle(self.x, self.y - 10.0, self.radius * 0.8, Color::new(self.color.r, self.color.g, self.color.b, 0.5));
             }
             CircleType::Big => {
                 draw_circle(self.x, self.y, self.radius, self.color);
-                // Add an outline for big circles
                 draw_circle_lines(self.x, self.y, self.radius + 5.0, 2.0, WHITE);
             }
         }
@@ -96,22 +83,15 @@ impl FallingCricle {
         self.y - self.radius > screen_height()
     }
 
-    // logic of collision detection
     fn collides_with(&self, px: f32, py: f32, pw: f32, ph: f32) -> bool {
-        // find closest point rectangle to circle
         let closest_x = self.x.clamp(px, px + pw);
         let closest_y = self.y.clamp(py, py + ph);
-
-        // calculate the distance between the circle and the closest point
         let dx = self.x - closest_x;
         let dy = self.y - closest_y;
-
-        // check if the distance is less than the radius
         dx * dx + dy * dy < self.radius * self.radius
     }
 }
 
-// Bullet struct for firing mechanism
 struct Bullet {
     x: f32,
     y: f32,
@@ -121,26 +101,11 @@ struct Bullet {
 
 impl Bullet {
     fn new(x: f32, y: f32) -> Self {
-        Self {
-            x,
-            y,
-            speed: 800.0,
-            active: true,
-        }
+        Self { x, y, speed: 800.0, active: true }
     }
-
-    fn update(&mut self, dt: f32) {
-        self.y -= self.speed * dt;
-    }
-
-    fn draw(&self) {
-        draw_circle(self.x, self.y, 5.0, WHITE);
-    }
-
-    fn is_off_screen(&self) -> bool {
-        self.y < 0.0
-    }
-
+    fn update(&mut self, dt: f32) { self.y -= self.speed * dt; }
+    fn draw(&self) { draw_circle(self.x, self.y, 5.0, WHITE); }
+    fn is_off_screen(&self) -> bool { self.y < 0.0 }
     fn collides_with_circle(&self, circle: &FallingCricle) -> bool {
         let dx = self.x - circle.x;
         let dy = self.y - circle.y;
@@ -150,177 +115,135 @@ impl Bullet {
 
 #[macroquad::main("Circle Dodger")]
 async fn main() {
-    // Load sound effect at startup
-    let explosion_sound = load_sound("./explosion.wav").await.unwrap();
+    let explosion_sound = load_sound("./shoot.wav").await.unwrap();
+    let background_sound = load_sound("./background.wav").await.unwrap();
 
-    // initialize the window and player properties
-    let mut player_x = screen_width() / 2.0;
-    let mut player_y = screen_height() - 50.0;
-    let player_size = 50.0;
-    let player_speed = 300.0;
+    play_sound(
+        &background_sound,
+        PlaySoundParams { looped: true, volume: 0.3 },
+    );
 
-    let mut circles = Vec::new();
-    let mut bullets = Vec::new();
-    let mut spawn_timer = 0.0;
-    let mut ammo = 20; // Limited ammunition
-    let max_ammo = 20;
+    loop { // 🔄 Game loop with restart support
+        let mut player_x = screen_width() / 2.0;
+        let mut player_y = screen_height() - 50.0;
+        let player_size = 50.0;
+        let player_speed = 300.0;
 
-    let mut score = 0;
-    loop {
-        let dt = get_frame_time(); // time 
+        let mut circles = Vec::new();
+        let mut bullets = Vec::new();
+        let mut spawn_timer = 0.0;
 
-        // for key movements
-        if is_key_down(KeyCode::Left) {
-            player_x -= player_speed * dt;
-        }
-        if is_key_down(KeyCode::Right) {
-            player_x += player_speed * dt;
-        }
-        
-        //for up and down movements
-        // if is_key_down(KeyCode::Up)
-        // {
-        //     player_y -= player_speed * dt;
-        // }
-        // if is_key_down(KeyCode::Down)
-        // {
-        //     player_y += player_speed * dt;
-        // }
+        let mut ammo = 20;
+        let max_ammo = 20;
+        let mut ammo_recharge_timer = 0.0; // ⏳ ammo recharge timer
 
-        // Bullet firing with Space key
-        if is_key_pressed(KeyCode::Space) && ammo > 0 {
-            bullets.push(Bullet::new(player_x + player_size / 2.0, player_y));
-            ammo -= 1;
-        }
+        let mut score = 0;
+        let mut lives = 3; // ❤️ multiple lives
+        let mut hit_timer= 0.0;
 
-        // keep player in the screen
-        player_x = player_x.clamp(0.0, screen_width() - player_size);
-        player_y = player_y.clamp(0.0, screen_height() - player_size);
+        'game: loop {
+            let dt = get_frame_time();
 
-        spawn_timer += dt;
+            if is_key_down(KeyCode::Left) { player_x -= player_speed * dt; }
+            if is_key_down(KeyCode::Right) { player_x += player_speed * dt; }
 
-        // Update bullets
-        for bullet in &mut bullets {
-            bullet.update(dt);
-        }
+            if is_key_pressed(KeyCode::Space) && ammo > 0 {
+                bullets.push(Bullet::new(player_x + player_size / 2.0, player_y));
+                ammo -= 1;
+            }
 
-        // Remove off-screen bullets
-        bullets.retain(|bullet| !bullet.is_off_screen());
+            player_x = player_x.clamp(0.0, screen_width() - player_size);
+            player_y = player_y.clamp(0.0, screen_height() - player_size);
 
-        // Check bullet collisions with circles
-        let mut circles_to_remove = Vec::new();
-        for (circle_idx, circle) in circles.iter_mut().enumerate() {
-            for bullet in &mut bullets {
-                if bullet.active && bullet.collides_with_circle(circle) {
-                    bullet.active = false;
-                    
-                    // Check if circle is destroyed
-                    if circle.take_damage() {
-                        circles_to_remove.push(circle_idx);
-                        score += circle.circle_type.get_points();
+            spawn_timer += dt;
+            ammo_recharge_timer += dt;
+            hit_timer -= dt;
 
-                        // Play explosion sound
-                        play_sound(
-                            &explosion_sound,
-                            PlaySoundParams {
-                                looped: false,
-                                volume: 0.5,
-                            },
-                        );
+            // 🔫 recharge ammo every 2 seconds
+            if ammo < max_ammo && ammo_recharge_timer > 2.0 {
+                ammo += 1;
+                ammo_recharge_timer = 0.0;
+            }
+
+            for bullet in &mut bullets { bullet.update(dt); }
+            bullets.retain(|b| !b.is_off_screen() && b.active);
+
+            let mut circles_to_remove = Vec::new();
+            for (circle_idx, circle) in circles.iter_mut().enumerate() {
+                for bullet in &mut bullets {
+                    if bullet.active && bullet.collides_with_circle(circle) {
+                        bullet.active = false;
+                        if circle.take_damage() {
+                            circles_to_remove.push(circle_idx);
+                            score += circle.circle_type.get_points();
+                            play_sound(&explosion_sound, PlaySoundParams { looped: false, volume: 0.5 });
+                        }
                     }
                 }
             }
-        }
-
-        // Remove destroyed circles and inactive bullets
-        for &idx in circles_to_remove.iter().rev() {
-            circles.remove(idx);
-        }
-        bullets.retain(|bullet| bullet.active);
-
-        // cricle spawn logic
-        if spawn_timer > 0.5 {
-            circles.push(FallingCricle::new());
-            spawn_timer = 0.0;
-        }
-
-        // update circle positions
-        for circle in &mut circles {
-            circle.update(dt);
-        }
-
-        // remove circles that are off the screen
-        circles.retain(|circle| !circle.is_of_screen());
-
-        // collision detection
-        for circle in &circles {
-            if circle.collides_with(player_x, player_y, player_size, player_size) {
-                // Show game over message
-                clear_background(BLACK);
-
-                let game_over_text = "Game Over";
-                let score_text = format!("Final Score: {}", score);
-
-                // Calculate text dimensions for centering
-                let game_over_size = 50.0;
-                let score_size = 40.0;
-                let screen_center_x = screen_width() / 2.0;
-                let screen_center_y = screen_height() / 2.0;
-
-                // Calculate text positions for perfect centering
-                let game_over_x = screen_center_x
-                    - measure_text(game_over_text, None, game_over_size as u16, 1.0).width / 2.0;
-                let score_x = screen_center_x
-                    - measure_text(&score_text, None, score_size as u16, 1.0).width / 2.0;
-
-                // Draw centered text
-                draw_text(
-                    game_over_text,
-                    game_over_x,
-                    screen_center_y - 30.0,
-                    game_over_size,
-                    RED,
-                );
-                draw_text(
-                    &score_text,
-                    score_x,
-                    screen_center_y + 30.0,
-                    score_size,
-                    WHITE,
-                );
-
-                next_frame().await;
-                // after game finish wait for 5 sec
-                std::thread::sleep(std::time::Duration::from_secs(3));
-                std::process::exit(0);
+            
+            if spawn_timer > 0.5 {
+                circles.push(FallingCricle::new());
+                spawn_timer = 0.0;
             }
+            
+            for circle in &mut circles { circle.update(dt); }
+            circles.retain(|c| !c.is_of_screen());
+            
+            for (i, circle) in circles.iter().enumerate() {
+                if circle.collides_with(player_x, player_y, player_size, player_size) {
+                    lives -= 1;
+                    hit_timer = 3.0; // 🛡️ hit invincibility timer
+                    circles_to_remove.push(i);
+                    if lives <= 0 {
+                        break 'game;
+                    }
+                }
+            }
+            for &idx in circles_to_remove.iter().rev() { circles.remove(idx); }
+
+            clear_background(BLACK);
+
+            // 🎯 score = time survived + circle kills
+            score += (dt * 10.0) as i32;
+
+            draw_text(&format!("Score: {}", score), 10.0, 20.0, 30.0, WHITE);
+            draw_text(&format!("Ammo: {}/{}", ammo, max_ammo), 10.0, 50.0, 30.0, YELLOW);
+
+            // ❤️ draw lives
+            for i in 0..lives {
+                draw_circle(20.0 + i as f32 * 30.0, 80.0, 10.0, RED);
+            }
+
+            if hit_timer <= 0.0 || (get_time() * 10.0) as i32 % 2 == 0 {
+                let p1 = vec2(player_x + player_size / 2.0, player_y);          // nose
+                let p2 = vec2(player_x, player_y + player_size);                // left wing
+                let p3 = vec2(player_x + player_size, player_y + player_size);  // right wing
+                draw_triangle(p1, p2, p3, BLUE);
+            }
+            for bullet in &bullets { bullet.draw(); }
+            for circle in &circles { circle.draw(); }
+            next_frame().await;
         }
 
-        clear_background(BLACK);
+        // 🟥 GAME OVER SCREEN
+        loop {
+            clear_background(BLACK);
+            let game_over_text = "Game Over";
+            let score_text = format!("Final Score: {}", score);
+            let restart_text = "Press R to Restart";
 
-        // Draw UI: Score and Ammo
-        score += 1;
-        draw_text(&format!("Score: {}", score), 10.0, 20.0, 30.0, WHITE);
-        draw_text(
-            &format!("Ammo: {}/{}", ammo, max_ammo),
-            10.0,
-            50.0,
-            30.0,
-            YELLOW,
-        );
+            let game_over_x = screen_width()/2.0 - measure_text(game_over_text, None, 50, 1.0).width/2.0;
+            let score_x = screen_width()/2.0 - measure_text(&score_text, None, 40, 1.0).width/2.0;
+            let restart_x = screen_width()/2.0 - measure_text(restart_text, None, 30, 1.0).width/2.0;
 
-        // Draw player
-        draw_rectangle(player_x, player_y, player_size, player_size, BLUE);
+            draw_text(game_over_text, game_over_x, screen_height()/2.0 - 40.0, 50.0, RED);
+            draw_text(&score_text, score_x, screen_height()/2.0, 40.0, WHITE);
+            draw_text(restart_text, restart_x, screen_height()/2.0 + 50.0, 30.0, GREEN);
 
-        // Draw bullets
-        for bullet in &bullets {
-            bullet.draw();
+            if is_key_pressed(KeyCode::R) { break; } // 🔄 Restart
+
+            next_frame().await;
         }
-
-        // Draw circles
-        for circle in &circles {
-            circle.draw();
-        }
-        next_frame().await;
     }
 }

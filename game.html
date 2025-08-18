@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Circle Dodger</title>
+    <script type="module">
+      import init from "./target/wasm32-unknown-unknown/release/circle_doger_rust.wasm";
+      init();
+    </script>
+  </head>
+  <body style="margin:0; overflow:hidden; background:black;">
+    <canvas id="canvas"></canvas>
+  </body>
+</html>
