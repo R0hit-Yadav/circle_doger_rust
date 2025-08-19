@@ -50,7 +50,7 @@ Make sure you have **Rust** installed ([Install Rust](https://www.rust-lang.org/
 
 1. Clone this repo:
    ```bash
-   git clone https://github.com/yourusername/circle-dodger.git
+   git clone https://github.com/R0hit-Yadav/circle-dodger.git
    cd circle-dodger
    cargo run 
 
