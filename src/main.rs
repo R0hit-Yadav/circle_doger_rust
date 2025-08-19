@@ -123,7 +123,7 @@ async fn main() {
         PlaySoundParams { looped: true, volume: 0.3 },
     );
 
-    loop { // 🔄 Game loop with restart support
+    loop {
         let mut player_x = screen_width() / 2.0;
         let mut player_y = screen_height() - 50.0;
         let player_size = 50.0;
@@ -135,42 +135,42 @@ async fn main() {
 
         let mut ammo = 20;
         let max_ammo = 20;
-        let mut ammo_recharge_timer = 0.0; // ⏳ ammo recharge timer
+        let mut ammo_recharge_timer = 0.0; 
 
         let mut score = 0;
-        let mut lives = 3; // ❤️ multiple lives
+        let mut lives = 3;
         let mut hit_timer= 0.0;
 
                 'game: loop {
             let dt = get_frame_time();
 
-            // --- Input Handling ---
+            
             let mut moving_left = false;
             let mut moving_right = false;
             let mut shooting = false;
 
-            // 🎮 Keyboard
+            // keyboard controls
             if is_key_down(KeyCode::Left) { moving_left = true; }
             if is_key_down(KeyCode::Right) { moving_right = true; }
             if is_key_pressed(KeyCode::Space) { shooting = true; }
 
-            // 📱 Touch
+            // phone controls
             for touch in touches() {
-                // Left third → move left
+            
                 if touch.position.x < screen_width() / 3.0 {
                     moving_left = true;
                 }
-                // Right third → move right
+                
                 else if touch.position.x > 2.0 * screen_width() / 3.0 {
                     moving_right = true;
                 }
-                // Middle → shoot
+                
                 else {
                     shooting = true;
                 }
             }
 
-            // --- Apply Movement & Shooting ---
+            
             if moving_left { player_x -= player_speed * dt; }
             if moving_right { player_x += player_speed * dt; }
 
@@ -179,26 +179,26 @@ async fn main() {
                 ammo -= 1;
             }
 
-            // keep player on screen
+            
             player_x = player_x.clamp(0.0, screen_width() - player_size);
             player_y = player_y.clamp(0.0, screen_height() - player_size);
 
-            // --- Timers ---
+            
             spawn_timer += dt;
             ammo_recharge_timer += dt;
             hit_timer -= dt;
 
-            // 🔫 recharge ammo every 2 seconds
-            if ammo < max_ammo && ammo_recharge_timer > 2.0 {
+            
+            if ammo < max_ammo && ammo_recharge_timer > 1.0 {
                 ammo += 1;
                 ammo_recharge_timer = 0.0;
             }
 
-            // --- Update Bullets ---
+            
             for bullet in &mut bullets { bullet.update(dt); }
             bullets.retain(|b| !b.is_off_screen() && b.active);
 
-            // --- Bullet ↔ Circle Collisions ---
+            
             let mut circles_to_remove = Vec::new();
             for (circle_idx, circle) in circles.iter_mut().enumerate() {
                 for bullet in &mut bullets {
@@ -213,7 +213,7 @@ async fn main() {
                 }
             }
 
-            // --- Spawn New Circles ---
+            
             if spawn_timer > 0.5 {
                 circles.push(FallingCricle::new());
                 spawn_timer = 0.0;
@@ -222,11 +222,11 @@ async fn main() {
             for circle in &mut circles { circle.update(dt); }
             circles.retain(|c| !c.is_of_screen());
 
-            // --- Player ↔ Circle Collision ---
+            
             for (i, circle) in circles.iter().enumerate() {
                 if circle.collides_with(player_x, player_y, player_size, player_size) {
                     lives -= 1;
-                    hit_timer = 3.0; // 🛡️ hit invincibility timer
+                    hit_timer = 3.0; 
                     circles_to_remove.push(i);
                     if lives <= 0 {
                         break 'game;
@@ -235,36 +235,36 @@ async fn main() {
             }
             for &idx in circles_to_remove.iter().rev() { circles.remove(idx); }
 
-            // --- Draw ---
+            
             draw_gradient_background();
 
-            // 🎯 score = time survived + circle kills
+            
             score += (dt * 10.0) as i32;
 
             draw_text(&format!("Score: {}", score), 10.0, 20.0, 30.0, WHITE);
             draw_text(&format!("Ammo: {}/{}", ammo, max_ammo), 10.0, 50.0, 30.0, YELLOW);
 
-            // ❤️ draw lives
+            
             for i in 0..lives {
                 draw_circle(20.0 + i as f32 * 30.0, 80.0, 10.0, RED);
             }
 
-            // 🚀 Draw player (with blink effect when hit)
+            
             if hit_timer <= 0.0 || (get_time() * 10.0) as i32 % 2 == 0 {
-                let p1 = vec2(player_x + player_size / 2.0, player_y);          // nose
-                let p2 = vec2(player_x, player_y + player_size);                // left wing
-                let p3 = vec2(player_x + player_size, player_y + player_size);  // right wing
+                let p1 = vec2(player_x + player_size / 2.0, player_y);          
+                let p2 = vec2(player_x, player_y + player_size);                
+                let p3 = vec2(player_x + player_size, player_y + player_size);  
                 draw_triangle(p1, p2, p3, BLUE);
             }
 
-            // draw bullets & circles
+            
             for bullet in &bullets { bullet.draw(); }
             for circle in &circles { circle.draw(); }
 
             next_frame().await;
         }
 
-        // 🟥 GAME OVER SCREEN
+        
         loop {
             clear_background(BLACK);
             let game_over_text = "Game Over";
@@ -279,7 +279,7 @@ async fn main() {
             draw_text(&score_text, score_x, screen_height()/2.0, 40.0, WHITE);
             draw_text(restart_text, restart_x, screen_height()/2.0 + 50.0, 30.0, GREEN);
 
-            if is_key_pressed(KeyCode::R) { break; } // 🔄 Restart
+            if is_key_pressed(KeyCode::R) { break; } 
 
             next_frame().await;
         }
@@ -305,7 +305,7 @@ fn draw_gradient_background() {
         1.0,
     );
 
-    let steps = 50; // smoother gradient = more steps
+    let steps = 50;
     let h = screen_height() / steps as f32;
 
     for i in 0..steps {
